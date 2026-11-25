@@ -770,12 +770,17 @@
             return;
           }
 
+          var everConnected = false;
           db.ref('.info/connected').on('value', function (snap) {
             connected = snap.val() === true;
             if (connected) {
+              everConnected = true;
               showNotice(null);
               setLiveStatus('En vivo: todo lo que se escriba aquí llega al momento.');
               markPresence(state.author, true);
+            } else if (!everConnected) {
+              showNotice('Conectando con el chat en vivo…');
+              setLiveStatus('Conectando con el cuarto…');
             } else {
               showNotice('Sin conexión con el chat en vivo. Los mensajes nuevos no llegarán hasta que vuelva la conexión.');
               setLiveStatus('Sin conexión por ahora…');
@@ -788,7 +793,7 @@
               var v = child.val() || {};
               list.push({
                 key: child.key,
-                author: v.author === 'hikari' ? 'hikari' : 'ritsu',
+                author: String(v.author || '').toLowerCase() === 'hikari' ? 'hikari' : 'ritsu',
                 type: TYPE_LABELS[v.type] ? v.type : 'nota',
                 time: v.time || null,
                 text: v.text || ''
