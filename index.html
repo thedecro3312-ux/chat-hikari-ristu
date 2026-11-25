@@ -312,6 +312,80 @@
       @media (prefers-color-scheme: dark) { .send-btn { background: var(--sage); color: #22301f; } }
       .hint { font-size: .8rem; color: var(--ink-faint); margin: 8px 2px 0; }
 
+      /* ---------- adjuntos ---------- */
+      .attach-btn {
+        flex: none;
+        width: 46px; height: 46px; border-radius: 50%;
+        border: 1px solid var(--line); cursor: pointer;
+        background: var(--surface); color: var(--ink-soft);
+        display: grid; place-items: center;
+        transition: transform .12s ease, color .12s ease, border-color .12s ease;
+      }
+      .attach-btn:hover { color: var(--sage-deep); border-color: var(--sage); transform: translateY(-1px); }
+      .attach-btn:disabled { opacity: .4; cursor: default; transform: none; }
+      .attach-preview {
+        display: flex; align-items: center; gap: 10px;
+        margin-top: 10px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 8px 10px;
+      }
+      .attach-preview[hidden] { display: none; }
+      .attach-thumb {
+        width: 44px; height: 44px; border-radius: 10px;
+        object-fit: cover; flex: none;
+        background: var(--surface-2);
+      }
+      .attach-icon {
+        width: 44px; height: 44px; border-radius: 10px; flex: none;
+        display: grid; place-items: center;
+        background: var(--surface-2); color: var(--ink-soft);
+      }
+      .attach-meta { min-width: 0; flex: 1; }
+      .attach-name { font-size: .9rem; font-weight: 800; overflow-wrap: anywhere; line-height: 1.3; }
+      .attach-size { font-size: .78rem; color: var(--ink-faint); font-weight: 700; }
+      .attach-remove {
+        flex: none;
+        border: none; background: transparent; cursor: pointer;
+        color: var(--ink-faint); font-size: 1.15rem; line-height: 1;
+        width: 36px; height: 36px; border-radius: 50%;
+      }
+      .attach-remove:hover { color: var(--rose-deep); background: var(--surface-2); }
+      .attach-progress {
+        margin-top: 10px;
+        font-size: .85rem; font-weight: 700; color: var(--sage-deep);
+        display: flex; align-items: center; gap: 10px;
+      }
+      .attach-progress[hidden] { display: none; }
+      .attach-progress progress {
+        flex: 1; height: 8px; appearance: none; -webkit-appearance: none;
+      }
+      .attach-progress progress::-webkit-progress-bar { background: var(--line); border-radius: 999px; }
+      .attach-progress progress::-webkit-progress-value { background: var(--sage); border-radius: 999px; }
+      .attach-progress progress::-moz-progress-bar { background: var(--sage); border-radius: 999px; }
+
+      .bubble .attach-img {
+        display: block; max-width: 100%; width: 320px;
+        border-radius: 12px; margin-bottom: 2px;
+      }
+      .bubble .attach-img-link { display: block; }
+      .bubble .attach-file {
+        display: flex; align-items: center; gap: 10px;
+        text-decoration: none; color: inherit;
+        background: rgba(255, 255, 255, .45);
+        border: 1px solid rgba(0, 0, 0, .08);
+        border-radius: 12px; padding: 9px 12px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .bubble .attach-file { background: rgba(0, 0, 0, .18); border-color: rgba(255, 255, 255, .12); }
+      }
+      .bubble .attach-file:hover { text-decoration: underline; }
+      .bubble .attach-file .af-icon { flex: none; display: grid; place-items: center; }
+      .bubble .attach-file .af-name { font-weight: 800; font-size: .92rem; overflow-wrap: anywhere; line-height: 1.3; }
+      .bubble .attach-file .af-size { display: block; font-size: .78rem; font-weight: 700; opacity: .75; }
+      .bubble .attach-caption { margin-top: 8px; }
+
       /* ---------- lateral ---------- */
       aside { display: flex; flex-direction: column; gap: 18px; }
       .side-card { padding: 18px 20px 20px; }
@@ -440,12 +514,31 @@
             </div>
             <div class="row input-row">
               <label class="field-label" for="draft" style="position:absolute; left:-9999px;">Mensaje</label>
+              <button type="button" class="attach-btn" id="attachBtn" aria-label="Adjuntar una imagen o un archivo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <input type="file" id="fileInput" hidden />
               <textarea id="draft" rows="1" placeholder="Escribe algo bonito y claro…"></textarea>
               <button type="submit" class="send-btn" id="sendBtn" aria-label="Enviar mensaje" disabled>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
               </button>
             </div>
-            <p class="hint">Enter para enviar · Shift + Enter para un salto de línea. Todo se guarda en vivo: la otra lo ve en cuanto abre la página.</p>
+            <div class="attach-preview" id="attachPreview" hidden>
+              <img class="attach-thumb" id="attachThumb" alt="" hidden />
+              <span class="attach-icon" id="attachIcon" hidden>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+              </span>
+              <span class="attach-meta">
+                <span class="attach-name" id="attachName"></span>
+                <span class="attach-size" id="attachSize"></span>
+              </span>
+              <button type="button" class="attach-remove" id="attachRemove" aria-label="Quitar el archivo adjunto">×</button>
+            </div>
+            <div class="attach-progress" id="attachProgress" hidden>
+              <progress id="attachBar" max="100" value="0"></progress>
+              <span id="attachProgressText">Subiendo…</span>
+            </div>
+            <p class="hint">Enter para enviar · Shift + Enter para un salto de línea. Con el clip puedes adjuntar una imagen o un archivo (máx. 50 MB); si quieres, escribe un texto para acompañarlo. Todo se guarda en vivo: la otra lo ve en cuanto abre la página.</p>
           </form>
         </section>
 
@@ -491,6 +584,7 @@
               <li><strong>Cada quien abre esta misma página</strong> en su navegador, en la compu o en el teléfono.</li>
               <li><strong>Escribe eligiendo su nombre</strong> arriba del cuadro de texto: Ritsu en verde, Hikari en rosa.</li>
               <li><strong>Los mensajes llegan solos:</strong> se guardan en el mismo proyecto de Firebase de la Sala, en un cuarto aparte solo para nosotras. Si arriba dice «en línea», la otra está aquí ahora mismo.</li>
+              <li><strong>También se pueden mandar imágenes y archivos</strong> con el botón del clip junto al cuadro de texto: las imágenes se ven dentro del mensaje y los demás archivos se descargan con un toque.</li>
             </ol>
             <p class="feedback" id="liveStatus" role="status">Conectando con el cuarto…</p>
           </section>
@@ -502,6 +596,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
     <script>
       (function () {
         var thread = document.getElementById('thread');
@@ -510,6 +605,17 @@
         var form = document.getElementById('composer');
         var connNotice = document.getElementById('connNotice');
         var liveStatus = document.getElementById('liveStatus');
+        var attachBtn = document.getElementById('attachBtn');
+        var fileInput = document.getElementById('fileInput');
+        var attachPreview = document.getElementById('attachPreview');
+        var attachThumb = document.getElementById('attachThumb');
+        var attachIcon = document.getElementById('attachIcon');
+        var attachName = document.getElementById('attachName');
+        var attachSize = document.getElementById('attachSize');
+        var attachRemove = document.getElementById('attachRemove');
+        var attachProgress = document.getElementById('attachProgress');
+        var attachBar = document.getElementById('attachBar');
+        var attachProgressText = document.getElementById('attachProgressText');
 
         var firebaseConfig = {
           apiKey: "AIzaSyBKbc_r74_4WgUfaSpkA8T03-owE-Nhu8U",
@@ -547,7 +653,22 @@
         var dbReady = false;
         var msgRef = null;
         var presenceRef = null;
+        var storageRef = null;
         var presenceData = {};
+        var pendingFile = null;
+        var uploading = false;
+        var MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+        function fmtSize(bytes) {
+          if (!bytes && bytes !== 0) return '';
+          if (bytes < 1024) return bytes + ' B';
+          if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+          return (bytes / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
+        }
+
+        function fileSVG() {
+          return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>';
+        }
 
         function birdSVG(color) {
           return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7l4 3-6.5 1"/><path d="m9 10 3-3"/><path d="M8.5 21a5.5 5.5 0 0 0 5.5-5.5"/></svg>';
@@ -617,7 +738,55 @@
 
             var bubble = document.createElement('div');
             bubble.className = 'bubble';
-            bubble.textContent = m.text;
+
+            if (m.file && m.file.url) {
+              if (m.file.kind === 'image') {
+                var link = document.createElement('a');
+                link.className = 'attach-img-link';
+                link.href = m.file.url;
+                link.target = '_blank';
+                link.rel = 'noopener';
+                var img = document.createElement('img');
+                img.className = 'attach-img';
+                img.src = m.file.url;
+                img.alt = m.file.name || 'Imagen adjunta';
+                img.loading = 'lazy';
+                link.appendChild(img);
+                bubble.appendChild(link);
+              } else {
+                var fLink = document.createElement('a');
+                fLink.className = 'attach-file';
+                fLink.href = m.file.url;
+                fLink.target = '_blank';
+                fLink.rel = 'noopener';
+                fLink.setAttribute('download', m.file.name || '');
+                var fIcon = document.createElement('span');
+                fIcon.className = 'af-icon';
+                fIcon.innerHTML = fileSVG();
+                var fMeta = document.createElement('span');
+                var fName = document.createElement('span');
+                fName.className = 'af-name';
+                fName.textContent = m.file.name || 'Archivo adjunto';
+                fMeta.appendChild(fName);
+                if (m.file.size) {
+                  var fSize = document.createElement('span');
+                  fSize.className = 'af-size';
+                  fSize.textContent = fmtSize(m.file.size) + ' · toca para descargar';
+                  fMeta.appendChild(fSize);
+                }
+                fLink.appendChild(fIcon);
+                fLink.appendChild(fMeta);
+                bubble.appendChild(fLink);
+              }
+              if (m.text) {
+                var caption = document.createElement('div');
+                caption.className = 'attach-caption';
+                caption.textContent = m.text;
+                bubble.appendChild(caption);
+              }
+            } else {
+              bubble.textContent = m.text;
+            }
 
             body.appendChild(meta);
             body.appendChild(bubble);
@@ -709,9 +878,65 @@
           });
         });
 
+        /* ---------- adjuntos ---------- */
+        function clearPendingFile() {
+          if (attachThumb.src && attachThumb.src.indexOf('blob:') === 0) {
+            URL.revokeObjectURL(attachThumb.src);
+          }
+          pendingFile = null;
+          fileInput.value = '';
+          attachPreview.hidden = true;
+          attachThumb.hidden = true;
+          attachThumb.removeAttribute('src');
+          attachIcon.hidden = true;
+          attachName.textContent = '';
+          attachSize.textContent = '';
+          syncSend();
+        }
+
+        function setPendingFile(file) {
+          clearPendingFile();
+          if (!file) return;
+          if (file.size > MAX_FILE_BYTES) {
+            showNotice('Ese archivo pesa ' + fmtSize(file.size) + ' y el máximo aquí es 50 MB. Elige uno más ligero.');
+            return;
+          }
+          pendingFile = file;
+          attachName.textContent = file.name;
+          attachSize.textContent = fmtSize(file.size);
+          if (file.type.indexOf('image/') === 0) {
+            attachThumb.src = URL.createObjectURL(file);
+            attachThumb.hidden = false;
+            attachIcon.hidden = true;
+          } else {
+            attachThumb.hidden = true;
+            attachIcon.hidden = false;
+          }
+          attachPreview.hidden = false;
+          showNotice(null);
+          syncSend();
+        }
+
+        attachBtn.addEventListener('click', function () { fileInput.click(); });
+        fileInput.addEventListener('change', function () {
+          setPendingFile(fileInput.files && fileInput.files[0]);
+        });
+        attachRemove.addEventListener('click', clearPendingFile);
+
+        function setUploading(on, pct) {
+          uploading = on;
+          attachProgress.hidden = !on;
+          if (on) {
+            attachBar.value = pct || 0;
+            attachProgressText.textContent = 'Subiendo… ' + Math.round(pct || 0) + '%';
+          }
+          attachBtn.disabled = on;
+          syncSend();
+        }
+
         /* ---------- compositor ---------- */
         function syncSend() {
-          sendBtn.disabled = draft.value.trim().length === 0;
+          sendBtn.disabled = uploading || (draft.value.trim().length === 0 && !pendingFile);
         }
         draft.addEventListener('input', function () {
           syncSend();
@@ -721,33 +946,83 @@
         draft.addEventListener('keydown', function (e) {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (draft.value.trim()) form.requestSubmit();
+            if (draft.value.trim() || pendingFile) form.requestSubmit();
           }
         });
         form.addEventListener('submit', function (e) {
           e.preventDefault();
           var text = draft.value.trim();
-          if (!text) return;
+          var file = pendingFile;
+          if (!text && !file) return;
+          if (uploading) return;
           if (!dbReady || !connected || !msgRef) {
             showNotice('Sin conexión con el chat en vivo: tu mensaje no se envió. Revisa tu internet y espera a que vuelva la conexión.');
             return;
           }
-          var sent = text;
+
+          function pushMessage(fileMeta) {
+            msgRef.push({
+              author: state.author,
+              type: state.type,
+              text: text,
+              file: fileMeta || null,
+              time: nowTime(),
+              ts: firebase.database.ServerValue.TIMESTAMP
+            }).then(function () {
+              showNotice(null);
+            }, function () {
+              if (!draft.value) draft.value = text;
+              if (file && !pendingFile) setPendingFile(file);
+              syncSend();
+              showNotice('No se pudo enviar el mensaje. Inténtalo de nuevo en un momento.');
+            });
+          }
+
           draft.value = '';
           draft.style.height = 'auto';
+          clearPendingFile();
           syncSend();
-          msgRef.push({
-            author: state.author,
-            type: state.type,
-            text: sent,
-            time: nowTime(),
-            ts: firebase.database.ServerValue.TIMESTAMP
-          }).then(function () {
-            showNotice(null);
+
+          if (!file) {
+            pushMessage(null);
+            return;
+          }
+
+          if (!storageRef) {
+            draft.value = text;
+            setPendingFile(file);
+            showNotice('No se pudo preparar la subida de archivos. Recarga la página e inténtalo de nuevo.');
+            return;
+          }
+
+          var safeName = file.name.replace(/[^\w.\-]+/g, '_').slice(-80) || 'archivo';
+          var path = 'rooms/hikariRistu/files/' + Date.now() + '-' + safeName;
+          var task = storageRef.child(path).put(file, { contentType: file.type || 'application/octet-stream' });
+          setUploading(true, 0);
+          task.on('state_changed', function (snap) {
+            var pct = snap.totalBytes ? (snap.bytesTransferred / snap.totalBytes) * 100 : 0;
+            setUploading(true, pct);
           }, function () {
-            draft.value = sent;
-            syncSend();
-            showNotice('No se pudo enviar el mensaje. Inténtalo de nuevo en un momento.');
+            setUploading(false, 0);
+            if (!draft.value) draft.value = text;
+            setPendingFile(file);
+            showNotice('No se pudo subir el archivo. Si sigue fallando, puede que el almacenamiento de Firebase necesite activar las reglas de subida: avísale a Hikari.');
+          }, function () {
+            task.snapshot.ref.getDownloadURL().then(function (url) {
+              setUploading(false, 100);
+              pushMessage({
+                url: url,
+                name: file.name,
+                type: file.type || '',
+                size: file.size,
+                kind: file.type.indexOf('image/') === 0 ? 'image' : 'file'
+              });
+            }, function () {
+              setUploading(false, 0);
+              if (!draft.value) draft.value = text;
+              setPendingFile(file);
+              showNotice('El archivo subió, pero no se pudo obtener su enlace. Inténtalo de nuevo en un momento.');
+            });
           });
         });
 
@@ -763,6 +1038,7 @@
             var db = firebase.database();
             msgRef = db.ref('rooms/hikariRistu/messages');
             presenceRef = db.ref('rooms/hikariRistu/presence');
+            try { storageRef = firebase.storage().ref(); } catch (storageErr) { storageRef = null; }
             dbReady = true;
           } catch (err) {
             showNotice('No se pudo conectar con el chat en vivo. Recarga la página para intentarlo otra vez.');
@@ -791,12 +1067,23 @@
             var list = [];
             snap.forEach(function (child) {
               var v = child.val() || {};
+              var file = null;
+              if (v.file && v.file.url) {
+                file = {
+                  url: v.file.url,
+                  name: v.file.name || 'Archivo adjunto',
+                  type: v.file.type || '',
+                  size: v.file.size || 0,
+                  kind: v.file.kind === 'image' ? 'image' : 'file'
+                };
+              }
               list.push({
                 key: child.key,
                 author: String(v.author || '').toLowerCase() === 'hikari' ? 'hikari' : 'ritsu',
                 type: TYPE_LABELS[v.type] ? v.type : 'nota',
                 time: v.time || null,
-                text: v.text || ''
+                text: v.text || '',
+                file: file
               });
             });
             messages = list;
