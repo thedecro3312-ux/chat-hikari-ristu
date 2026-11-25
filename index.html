@@ -182,11 +182,34 @@
       }
       .chat-head .today { color: var(--ink-faint); font-size: .85rem; font-weight: 700; }
 
+      .thread-wrap { position: relative; }
       .thread {
-        padding: 18px 16px 8px;
+        padding: 18px 16px 14px;
         display: flex; flex-direction: column; gap: 14px;
-        min-height: 320px;
+        height: clamp(320px, 58vh, 620px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: var(--sage) transparent;
       }
+      .thread::-webkit-scrollbar { width: 8px; }
+      .thread::-webkit-scrollbar-thumb { background: var(--sage); border-radius: 999px; }
+      .thread::-webkit-scrollbar-track { background: transparent; }
+      .jump-btn {
+        position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+        z-index: 2;
+        display: inline-flex; align-items: center; gap: 7px;
+        border: none; cursor: pointer;
+        font: inherit; font-size: .85rem; font-weight: 800;
+        min-height: 40px; padding: 8px 16px; border-radius: 999px;
+        background: var(--sage-deep); color: #fff;
+        box-shadow: 0 6px 18px rgba(71, 96, 63, .35);
+        white-space: nowrap;
+      }
+      .jump-btn[hidden] { display: none; }
+      .jump-btn:hover { transform: translateX(-50%) translateY(-1px); }
+      .jump-btn:active { transform: translateX(-50%) translateY(1px); }
+      @media (prefers-color-scheme: dark) { .jump-btn { background: var(--sage); color: #22301f; } }
       .day-note {
         align-self: center;
         font-size: .8rem; font-weight: 700; color: var(--ink-faint);
@@ -489,7 +512,13 @@
           </div>
           <div class="conn-notice" id="connNotice" role="alert" hidden></div>
 
-          <div class="thread" id="thread" aria-live="polite"></div>
+          <div class="thread-wrap">
+            <div class="thread" id="thread" aria-live="polite"></div>
+            <button type="button" class="jump-btn" id="jumpBtn" hidden>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+              <span id="jumpLabel">Ir a lo más nuevo</span>
+            </button>
+          </div>
 
           <form class="composer" id="composer">
             <div class="row">
@@ -538,7 +567,7 @@
               <progress id="attachBar" max="100" value="0"></progress>
               <span id="attachProgressText">Subiendo…</span>
             </div>
-            <p class="hint">Enter para enviar · Shift + Enter para un salto de línea. Con el clip puedes adjuntar una imagen o un archivo (máx. 50 MB); si quieres, escribe un texto para acompañarlo. Todo se guarda en vivo: la otra lo ve en cuanto abre la página.</p>
+            <p class="hint">Enter para enviar · Shift + Enter para un salto de línea. Con el clip puedes adjuntar una imagen o un archivo (máx. 50 MB); si quieres, escribe un texto para acompañarlo. La conversación baja sola a lo más nuevo; si subes a releer algo, aparece un botón para volver al final.</p>
           </form>
         </section>
 
@@ -616,6 +645,8 @@
         var attachProgress = document.getElementById('attachProgress');
         var attachBar = document.getElementById('attachBar');
         var attachProgressText = document.getElementById('attachProgressText');
+        var jumpBtn = document.getElementById('jumpBtn');
+        var jumpLabel = document.getElementById('jumpLabel');
 
         var firebaseConfig = {
           apiKey: "AIzaSyBKbc_r74_4WgUfaSpkA8T03-owE-Nhu8U",
@@ -657,6 +688,9 @@
         var presenceData = {};
         var pendingFile = null;
         var uploading = false;
+        var pinnedToBottom = true;
+        var unseenCount = 0;
+        var liveRendered = false;
         var MAX_FILE_BYTES = 50 * 1024 * 1024;
 
         function fmtSize(bytes) {
@@ -691,6 +725,46 @@
         function setLiveStatus(text) {
           if (liveStatus) liveStatus.textContent = text;
         }
+
+        /* ---------- scroll del hilo ---------- */
+        function isNearBottom() {
+          return thread.scrollHeight - thread.scrollTop - thread.clientHeight < 140;
+        }
+
+        function scrollToBottom(smooth) {
+          var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          requestAnimationFrame(function () {
+            if (typeof thread.scrollTo === 'function') {
+              thread.scrollTo({ top: thread.scrollHeight, behavior: smooth && !reduce ? 'smooth' : 'auto' });
+            } else {
+              thread.scrollTop = thread.scrollHeight;
+            }
+          });
+        }
+
+        function updateJumpBtn() {
+          if (pinnedToBottom) {
+            jumpBtn.hidden = true;
+            return;
+          }
+          jumpLabel.textContent = unseenCount > 0
+            ? (unseenCount === 1 ? '1 mensaje nuevo' : unseenCount + ' mensajes nuevos')
+            : 'Ir a lo más nuevo';
+          jumpBtn.hidden = false;
+        }
+
+        thread.addEventListener('scroll', function () {
+          pinnedToBottom = isNearBottom();
+          if (pinnedToBottom) unseenCount = 0;
+          updateJumpBtn();
+        }, { passive: true });
+
+        jumpBtn.addEventListener('click', function () {
+          pinnedToBottom = true;
+          unseenCount = 0;
+          updateJumpBtn();
+          scrollToBottom(true);
+        });
 
         /* ---------- render ---------- */
         function renderList(list) {
@@ -751,6 +825,9 @@
                 img.src = m.file.url;
                 img.alt = m.file.name || 'Imagen adjunta';
                 img.loading = 'lazy';
+                img.addEventListener('load', function () {
+                  if (pinnedToBottom) scrollToBottom(false);
+                });
                 link.appendChild(img);
                 bubble.appendChild(link);
               } else {
@@ -960,6 +1037,10 @@
             return;
           }
 
+          pinnedToBottom = true;
+          unseenCount = 0;
+          updateJumpBtn();
+
           function pushMessage(fileMeta) {
             msgRef.push({
               author: state.author,
@@ -1086,8 +1167,21 @@
                 file: file
               });
             });
+            var prevScrollTop = thread.scrollTop;
+            var wasPinned = pinnedToBottom || !liveRendered;
+            var added = Math.max(0, list.length - messages.length);
             messages = list;
             render();
+            if (wasPinned) {
+              pinnedToBottom = true;
+              unseenCount = 0;
+              scrollToBottom(false);
+            } else {
+              thread.scrollTop = prevScrollTop;
+              if (added > 0) unseenCount += added;
+            }
+            liveRendered = true;
+            updateJumpBtn();
           }, function () {
             showNotice('Firebase rechazó la lectura del cuarto. Si sigue así, avísale a Hikari para revisar las reglas del proyecto.');
           });
@@ -1112,6 +1206,7 @@
         document.getElementById('todayLabel').textContent = today.charAt(0).toUpperCase() + today.slice(1);
 
         render();
+        scrollToBottom(false);
         renderPresence();
         syncSend();
         startLive();
